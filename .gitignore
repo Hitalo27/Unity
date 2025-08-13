@@ -1,0 +1,27 @@
+Library/
+Temp/
+Logs/
+MemoryCaptures/
+Obj/
+Build/
+Builds/
+UserSettings/
+Packages/com.unity.*.tests/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Python venv
+venv/
+.env/

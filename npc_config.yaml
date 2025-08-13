@@ -1,0 +1,10 @@
+behaviors:
+  NPCMoveBehavior:
+    trainer_type: ppo
+    max_steps: 100000
+    time_horizon: 64
+    summary_freq: 1000
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
