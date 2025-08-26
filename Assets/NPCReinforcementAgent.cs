@@ -18,7 +18,7 @@ public class NPCReinforcementAgent : Agent
     {
         // Reseta a posição do agente e do alvo
         this.transform.localPosition = new Vector3(Random.Range(-4f, 4f), Random.Range(-4f, 4f), 0);
-        target.localPosition = new Vector3(Random.Range(-4f, 4f), Random.Range(-4f, 4f), 0);
+        //target.localPosition = new Vector3(Random.Range(-4f, 4f), Random.Range(-4f, 4f), 0);
 
         // Reseta a velocidade
         rb.linearVelocity = Vector2.zero;

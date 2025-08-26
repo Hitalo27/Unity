@@ -1,10 +1,16 @@
 behaviors:
-  NPCMoveBehavior:
+  CatchAgent:
     trainer_type: ppo
-    max_steps: 100000
-    time_horizon: 64
-    summary_freq: 1000
+    hyperparameters:
+      batch_size: 64
+      buffer_size: 2048
+    network_settings:
+      num_layers: 2
+      hidden_units: 128
     reward_signals:
       extrinsic:
         gamma: 0.99
         strength: 1.0
+    max_steps: 500000
+    time_horizon: 64
+    summary_freq: 10000
