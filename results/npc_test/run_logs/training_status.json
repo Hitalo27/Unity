@@ -1,0 +1,38 @@
+{
+    "CatchAgent": {
+        "checkpoints": [
+            {
+                "steps": 499967,
+                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-499967.onnx",
+                "reward": 0.5290439625581106,
+                "creation_time": 1756831954.0352771,
+                "auxillary_file_paths": [
+                    "results\\npc_test\\CatchAgent\\CatchAgent-499967.pt"
+                ]
+            },
+            {
+                "steps": 500004,
+                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-500004.onnx",
+                "reward": 0.5457880657452804,
+                "creation_time": 1756831954.0579274,
+                "auxillary_file_paths": [
+                    "results\\npc_test\\CatchAgent\\CatchAgent-500004.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 500004,
+            "file_path": "results\\npc_test\\CatchAgent.onnx",
+            "reward": 0.5457880657452804,
+            "creation_time": 1756831954.0579274,
+            "auxillary_file_paths": [
+                "results\\npc_test\\CatchAgent\\CatchAgent-500004.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.29.0",
+        "torch_version": "1.7.1+cpu"
+    }
+}

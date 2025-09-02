@@ -552,7 +552,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   version: 1
   data:
-    dataString: UEsDBBQAAAgIAACwn+vG78R3WAIAABMFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VMmS2jAQ/RVK55AyywCTWwIMkwMDNU5qLr4Iq22rkCWXJLNN8e9pyTZ2nMqJ5vXr7teL/Em4NAXEVumN5myrGJBvA+Js8mXQOl/hQlMlQ36DhvPBmc0ciXrOO7VcIT5yYUblYDWPv8tUOHKAYCl5onS+ZikslbEG4YQKA+jSyrpoidDngFzwZ/jsQq5ojefOuqH1HAzuaMYgLeiW2hAbWsUqZSxoXgBzklvyOGjo04onsZuaMnbJlRDc1FKIvRa+1bDIQIPrlXGKnfnywdcnBDLgaWb70bskMWBrUZpeV1zjiKq05Ieq5pZTc6yUnagoXaGFl1Sl3P7jHY68O9Eqf22qjnw/NuPx8Z1eY2psZ6xdeNUKH/nxnKk40oOAjwzkm9poVUqGTqtLF1oaGK/av4/GlhnExxavpPbAsvj/clwPd9/7ZSl4fvBznFZAKJQft189aFzMTxTsD8PUKRB1Kn4b+EXT7gXVjheujUVX3aV08g6q1I5K1n5mrpvSLpWW4OFadAGSCnvdYxrbX2DP1ynb87xQ91bq4rWveQK9EA+3/CDoufbq/FiWydR5CybblVZwCa1o53jDOS2VlNV9dWfShIWlTmjcCUtLzv4+LRIsxjCdB3QRwOIQzOlwEsxoMolnyROLx5NZQvztcYl9UrGvhNbjwa3JNrnEO2s+IYONpoW/dabpecNvueoK5DJRYawB5K5K8VAOGqvgq2RrxnFCIVjLpV84+YyIUPERWPSoGflW1xeradRmiUjBT8o6JCJL/9GIiIMfx7zXcOJwdsWbZHdy/wNQSwMEFAAACAgAALCf6zWgal5tAAAAeAAAAAkAJABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQGrVipLLSrOzM9TslIw0TPSMzTXUVBKL0osyCgGihiCOKWZKSB2tJKBhVGqiblBooVBqkWSgXmirrGBWWKacbJZmmlKspGxWZpSLFB9SWVBql9ibipET0BiSUZaZl5KZl66nntRZoo7yGil2FoAUEsBAi0AFAAACAgAALCf68bvxHdYAgAAEwUAAAsAJAAAAAAAAAAAAAAAAAAAAGdyYXBoMC5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsBAi0AFAAACAgAALCf6zWgal5tAAAAeAAAAAkAJAAAAAAAAAAAAAAApQIAAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLBQYAAAAAAgACALgAAABdAwAAAAA=
+    dataString: UEsDBBQAAAgIAACwn+u/RktbWwIAABUFAAALACQAZ3JhcGgwLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQF1VMmS2jAQ/RVK55CyYVgmtwQYJgcGapzUXHwRVhurkCWXJLNN8e9pyTZ2nMqJ5vXr7teL/Em4NAUkVum15myjGJBvA+Js8mXQOl/hQg9KRvwGDeeDM5s5EvWcd2q5Qjx0YUblYDVPvsuDcOQAwVLyVOl8xQ6wUMYahFMqDKBLK+uiJUKfA3LBn+GzC7miNZo564bWczC4o5mAtKBbakNsaBWrlImgeQHMSW7J4aShjyuexG5qSvh14tIrIbipxRB7LXyzUZGBBtct4xR78wICH5ABP2TWKe1Gb9PUgK1laXpdco1DqtKSH6qaXE7NsdJ2oqJ0heZeVJVy8493GHp3qlX+2lQNA1fBZjw5vtNrQo3tDLYLL1vhoR/QmYoj3Qv4yEC+qbVWpWTotLp0oaWB0bL9+2hskUFybPFKag8si/+vx/Vw971fFoLnez/HpwqIhPLj9ssHjav5iYL9aZg6BaJOxW8Dv+ihe0O144VrY9FVdymdvL0qtaOSlZ+Z66a0C6UleLgWXYCkwl53mMb2F9jzdcr2PC/UvZa6eO1rHkEvxMMtPwh6rp06P5ZlMnXegMm2pRVcQivaOd5wTgslZXVf3Zk0YVGpU5p0wg4lZ3+fFgnmI3iaBXQewHwfzOhwHExpOk6m6YQlo/E0Jf72uMQ+qdhVQuvx4NZkm1zinTUfkcFa08LfOtP0vOa3XHUFcpmqKNEAcluleCgHjVXwXbIV4zihCKzl0i+cfMZEqOQILH7UjH2rq4vVNG6zxKTgJ2UdEpOF/2zExMGPY95pOHE4u+JNsju5/wFQSwMEFAAACAgAALCf6zWgal5tAAAAeAAAAAkAJABtZXRhLmpzb24KACAAAAAAAAEAGAAAgD7V3rGdAQCAPtXesZ0BAIA+1d6xnQGrVipLLSrOzM9TslIw0TPSMzTXUVBKL0osyCgGihiCOKWZKSB2tJKBhVGqiblBooVBqkWSgXmirrGBWWKacbJZmmlKspGxWZpSLFB9SWVBql9ibipET0BiSUZaZl5KZl66nntRZoo7yGil2FoAUEsBAi0AFAAACAgAALCf679GS1tbAgAAFQUAAAsAJAAAAAAAAAAAAAAAAAAAAGdyYXBoMC5qc29uCgAgAAAAAAABABgAAIA+1d6xnQEAgD7V3rGdAQCAPtXesZ0BUEsBAi0AFAAACAgAALCf6zWgal5tAAAAeAAAAAkAJAAAAAAAAAAAAAAAqAIAAG1ldGEuanNvbgoAIAAAAAAAAQAYAACAPtXesZ0BAIA+1d6xnQEAgD7V3rGdAVBLBQYAAAAAAgACALgAAABgAwAAAAA=
     upgradeData: 
     file_cachedStartup: {fileID: 0}
     data_cachedStartup: 
@@ -1982,7 +1982,7 @@ Transform:
   m_GameObject: {fileID: 1500616238}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 9.87, y: 3.36, z: 0}
+  m_LocalPosition: {x: 9.85, y: 0.51, z: 0}
   m_LocalScale: {x: 1.6752602, y: 1.237, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2309,6 +2309,14 @@ MonoBehaviour:
   MaxStep: 0
   target: {fileID: 1500616240}
   moveSpeed: 3
+  mapLimitX: 4
+  mapLimitY: 4
+  successRadius: 1
+  noProgressWindow: 80
+  minProgressDelta: 0.01
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!114 &1595733185
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2316,7 +2324,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595733178}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 88b6042bc9a5d4aa58d931eae49442e5, type: 3}
   m_Name: 
@@ -2405,9 +2413,9 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
-  m_InferenceDevice: 0
-  m_BehaviorType: 0
+  m_Model: {fileID: 5022602860645237092, guid: 1348197af70c50647826de1d01489f15, type: 3}
+  m_InferenceDevice: 3
+  m_BehaviorType: 2
   m_BehaviorName: CatchAgent
   TeamId: 0
   m_UseChildSensors: 0

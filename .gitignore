@@ -25,3 +25,4 @@ Packages/com.unity.*.tests/
 # Python venv
 venv/
 .env/
+mlagents-env/

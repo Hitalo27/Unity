@@ -62,7 +62,7 @@ engine_settings:
   no_graphics: false
 environment_parameters: null
 checkpoint_settings:
-  run_id: CatchRun
+  run_id: npc_test
   initialize_from: null
   load_model: false
   resume: false
