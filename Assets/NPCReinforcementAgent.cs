@@ -9,6 +9,7 @@ public class NPCReinforcementAgent : Agent
     public Transform target;
     public float moveSpeed = 3f;
 
+
     // limites do mapa (meia-extensão)
     public float mapLimitX = 4f;
     public float mapLimitY = 4f;
@@ -22,6 +23,16 @@ public class NPCReinforcementAgent : Agent
 
     // layer das paredes/obstáculos (defina no Inspector)
     public LayerMask obstacleMask;
+
+    
+    //TODO 
+    //NPC Tomar penalidade dependendo do tamanho do obstaculo para aprender a desviar função para isso e tentar desviar
+    
+    //robocode IA para o npc que vai correr 
+    //https://github.com/robo-code/robocode
+
+    //metodologia: movimentações estrategicas
+    //atualizar o texto com oq conversamos e a diferença com oq mudei no npc fixo
 
     private Rigidbody2D rb;
     private float prevDistance, bestDistance;
