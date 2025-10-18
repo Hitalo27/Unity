@@ -2,31 +2,31 @@
     "CatchAgent": {
         "checkpoints": [
             {
-                "steps": 499976,
-                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-499976.onnx",
-                "reward": 2.161252941137978,
-                "creation_time": 1758223086.4820182,
+                "steps": 499988,
+                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-499988.onnx",
+                "reward": -0.3621427989564836,
+                "creation_time": 1760812615.534464,
                 "auxillary_file_paths": [
-                    "results\\npc_test\\CatchAgent\\CatchAgent-499976.pt"
+                    "results\\npc_test\\CatchAgent\\CatchAgent-499988.pt"
                 ]
             },
             {
-                "steps": 500040,
-                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-500040.onnx",
-                "reward": 2.161252941137978,
-                "creation_time": 1758223086.5392842,
+                "steps": 500013,
+                "file_path": "results\\npc_test\\CatchAgent\\CatchAgent-500013.onnx",
+                "reward": -0.6080766597555743,
+                "creation_time": 1760812615.5615995,
                 "auxillary_file_paths": [
-                    "results\\npc_test\\CatchAgent\\CatchAgent-500040.pt"
+                    "results\\npc_test\\CatchAgent\\CatchAgent-500013.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 500040,
+            "steps": 500013,
             "file_path": "results\\npc_test\\CatchAgent.onnx",
-            "reward": 2.161252941137978,
-            "creation_time": 1758223086.5392842,
+            "reward": -0.6080766597555743,
+            "creation_time": 1760812615.5615995,
             "auxillary_file_paths": [
-                "results\\npc_test\\CatchAgent\\CatchAgent-500040.pt"
+                "results\\npc_test\\CatchAgent\\CatchAgent-500013.pt"
             ]
         }
     },

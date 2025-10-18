@@ -9,39 +9,53 @@ public class NPCReinforcementAgent : Agent
     public Transform target;
     public float moveSpeed = 2f;
 
-
-    // limites do mapa (meia-extensão)
+    // limites do mapa só para normalizar observações
     public float mapLimitX = 4f;
     public float mapLimitY = 4f;
 
-    // sucesso mais “fácil” no começo; depois pode reduzir p/ 0.6f ou 0.5f
     public float successRadius = 1.0f;
 
-    // estagnação: se não melhorar por N steps, termina
+    // estagnação
     public int  noProgressWindow = 80;
     public float minProgressDelta = 0.01f;
 
-    // layer das paredes/obstáculos (defina no Inspector)
+    // obstáculos internos (mesas/caixas/etc.)
     public LayerMask obstacleMask;
 
+    // desvio por “3 antenas” (obstáculos internos)
     public float rayDist = 2f;
-    public float avoidAngle = 30f;     // graus para as “antenas” laterais
-    public float avoidWeight = 1.2f;   // peso do desvio
-    public float agentRadius = 0.35f;  // raio para o CircleCast
-    public float jitter = 0.0f;        // ruído opcional
+    public float avoidAngle = 30f;
+    public float avoidWeight = 1.2f;
+    public float agentRadius = 0.35f;
+    public float jitter = 0.0f;
 
-    // >>> NOVO: tag do fugitivo (o runner)
+    // ===== paredes externas (anti-colar na borda) via layer =====
+    [Header("Parede (bordas externas)")]
+    public LayerMask wallMask;                 // SOMENTE a layer das bordas
+    [Range(0.2f, 1.2f)] public float margemParede = 0.6f;
+    [Range(0.2f, 2.5f)] public float wallProbeLen = 1.2f;     // alcance base p/ medir folga
+    [Range(0.1f, 0.8f)] public float wallProbeRadius = 0.32f; // raio dos casts
+
+    [Header("Amostragem de direção segura")]
+    [Range(5, 41)] public int amostras = 13;                  // ímpar (13/17/21)
+    [Range(30f, 150f)] public float lequeGraus = 90f;         // abertura total do leque
+    [Range(0f, 1f)]     public float pesoAlinhamento = 0.25f; // alinhar com alvo
+    [Range(0f, 1.5f)]   public float pesoInterior = 0.6f;     // empurrar p/ “dentro” se perto
+    [Range(6, 40)]      public int probesInterior = 12;       // amostras radiais p/ detectar borda
+
+    // ===== Anti-oscilação =====
+    [Header("Anti-oscilação (mínimo)")]
+    public float steerSmoothing = 0.4f;
+    public int   flipThreshold  = 4;
+    public int   commitDuration = 12;
+    public float commitStrength = 0.5f;
+
     [SerializeField] string runnerTag = "Fugitivo";
 
-    
-    //TODO 
-    //NPC Tomar penalidade dependendo do tamanho do obstaculo para aprender a desviar função para isso e tentar desviar
-    
-    //robocode IA para o npc que vai correr 
-    //https://github.com/robo-code/robocode
-
-    //metodologia: movimentações estrategicas
-    //atualizar o texto com oq conversamos e a diferença com oq mudei no npc fixo
+    private Vector2 prevSteer = Vector2.zero;
+    private int     flipStreak = 0;
+    private int     commitTimer = 0;
+    private Vector2 commitBias  = Vector2.zero;
 
     private Rigidbody2D rb;
     private float prevDistance, bestDistance;
@@ -50,47 +64,44 @@ public class NPCReinforcementAgent : Agent
     public override void Initialize()
     {
         rb = GetComponent<Rigidbody2D>();
-        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous; // evitar “túnel”
+        rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
     public override void OnEpisodeBegin()
     {
-        // reposiciona agente e alvo
         transform.localPosition = new Vector3(Random.Range(-mapLimitX, mapLimitX), Random.Range(-mapLimitY, mapLimitY), 0);
         target.localPosition    = new Vector3(Random.Range(-mapLimitX, mapLimitX), Random.Range(-mapLimitY, mapLimitY), 0);
 
-        // zera velocidade
         rb.linearVelocity = Vector2.zero;
 
-        // inicializa distâncias
         prevDistance  = Vector2.Distance(transform.localPosition, target.localPosition);
         bestDistance  = prevDistance;
         stepsSinceBest = 0;
+
+        prevSteer   = Vector2.zero;
+        flipStreak  = 0;
+        commitTimer = 0;
+        commitBias  = Vector2.zero;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        // >>> 2D apenas (6 floats) <<<
         Vector2 agentPos  = (Vector2)transform.localPosition;
         Vector2 targetPos = (Vector2)target.localPosition;
-        Vector2 vel       = rb.linearVelocity;
 
-    Vector2 halfMap = new Vector2(Mathf.Max(mapLimitX, 0.001f),
-                                  Mathf.Max(mapLimitY, 0.001f));
+        Vector2 halfMap = new Vector2(Mathf.Max(mapLimitX, 0.001f),
+                                      Mathf.Max(mapLimitY, 0.001f));
 
-    // delta normalizado [-1..1] aprox
-    Vector2 delta = targetPos - agentPos;
-    Vector2 deltaNorm = new Vector2(delta.x / halfMap.x, delta.y / halfMap.y);
-    sensor.AddObservation(deltaNorm);                                  // 2
+        Vector2 delta = targetPos - agentPos;
+        Vector2 deltaNorm = new Vector2(delta.x / halfMap.x, delta.y / halfMap.y);
+        sensor.AddObservation(deltaNorm); // 2
 
-    // velocidade normalizada pelo moveSpeed
-    sensor.AddObservation(rb.linearVelocity / Mathf.Max(moveSpeed, 0.001f)); // 2
+        sensor.AddObservation(rb.linearVelocity / Mathf.Max(moveSpeed, 0.001f)); // 2
 
-    // “antenas” de parede (0..1)
-    var rays = SampleAvoidRays();
-    sensor.AddObservation(rays.wf);
-    sensor.AddObservation(rays.wl);
-    sensor.AddObservation(rays.wr);                                     // 3
+        var rays = SampleAvoidRays();
+        sensor.AddObservation(rays.wf);
+        sensor.AddObservation(rays.wl);
+        sensor.AddObservation(rays.wr); // 3
     }
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -102,58 +113,81 @@ public class NPCReinforcementAgent : Agent
         Vector2 dir = new Vector2(moveX, moveY);
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
-        // NOVO: desvio de obstáculos por “3 antenas” com CircleCast
-         var rays = SampleAvoidRays(dir);
+        // desvio de obstáculos internos (3 antenas)
+        var rays = SampleAvoidRays(dir);
         Vector2 avoid = rays.wf * Perp(rays.fwd) + rays.wl * Perp(rays.left) + rays.wr * Perp(rays.right);
 
-        Vector2 steer = dir + avoidWeight * avoid;
-        if (jitter > 0f) steer += Random.insideUnitCircle * jitter;
+        // direção “desejada” bruta (ação + desvio interno + ruído)
+        Vector2 desired = dir + avoidWeight * avoid;
+        if (jitter > 0f) desired += Random.insideUnitCircle * jitter;
+        if (desired.sqrMagnitude > 1f) desired.Normalize();
 
-        if (steer.sqrMagnitude > 1f) steer.Normalize();
-        rb.linearVelocity = steer * moveSpeed;
+        // ===== ANTI-PAREDE (somente wallMask) =====
+        Vector2 toTarget = (target != null)
+            ? ((Vector2)(target.position - transform.position)).normalized
+            : Vector2.right;
 
-        // movimento por física
-        // rb.linearVelocity = dir * moveSpeed;
+        Vector2 preferDentro = PreferenciaInteriorViaWallMask(rb.position);
+        Vector2 safeDir = MelhorDirecaoLivre(rb.position,
+                                             desired.sqrMagnitude > 1e-6f ? desired : toTarget,
+                                             toTarget,
+                                             preferDentro);
+        safeDir = FugaSegura(rb.position, safeDir);
+        // ==========================================
 
-        // distância e progresso
+        // ===== Anti-oscilação: suavizar + commit =====
+        Vector2 smooth = Vector2.Lerp(prevSteer, safeDir, Mathf.Clamp01(steerSmoothing));
+        if (smooth.sqrMagnitude > 1f) smooth.Normalize();
+
+        float dot = (prevSteer.sqrMagnitude < 1e-4f) ? 1f
+                   : Vector2.Dot(prevSteer.normalized, smooth.normalized);
+
+        if (dot < -0.2f) flipStreak++;
+        else if (dot > 0.4f) flipStreak = Mathf.Max(0, flipStreak - 1);
+
+        float turnCost = 1f - Mathf.Clamp01((dot + 1f) * 0.5f); // 0..1
+        AddReward(-0.0003f * turnCost);
+
+        if (commitTimer <= 0 && flipStreak >= flipThreshold)
+        {
+            bool preferLeft = rays.wl < rays.wr; // lado com menos obstáculo interno
+            Vector2 baseDir = (smooth.sqrMagnitude > 1e-4f) ? smooth.normalized : Vector2.right;
+            commitBias  = Rotate(baseDir, preferLeft ? +45f : -45f);
+            commitTimer = commitDuration;
+            flipStreak  = 0;
+        }
+
+        if (commitTimer > 0)
+        {
+            smooth = Vector2.Lerp(smooth, commitBias, commitStrength);
+            commitTimer--;
+            AddReward(+0.0002f);
+        }
+
+        rb.linearVelocity = smooth * moveSpeed;
+        // ==============================================
+
+        // ===== Recompensas =====
         float dist = Vector2.Distance(transform.localPosition, target.localPosition);
         float progress = prevDistance - dist;
 
-    // Progresso tem que dominar (clamp pra estabilidade)
         AddReward(0.6f * Mathf.Clamp(progress, -0.1f, 0.1f));
+        AddReward(-0.001f);
 
-            // Passo custa pouco ()
-            AddReward(-0.001f);
+        if (progress < 0f) AddReward(-0.01f);
+        if (rb.linearVelocity.magnitude < 0.05f) AddReward(-0.003f);
 
-    // Aproximar-se é bom; afastar-se é ruim (sinal claro)
-    if (progress < 0f) AddReward(-0.01f);
-
-        // penaliza ficar quase parado
-        if (rb.linearVelocity.magnitude < 0.05f)
-            AddReward(-0.003f);
-
-        // Pequena punição se perto de parede (ajuda a preferir caminhos limpos)
-     float nearWall = rays.wf + rays.wl + rays.wr; // 0..3
+        float nearWall = rays.wf + rays.wl + rays.wr; // (internos) penaliza “apertado”
         AddReward(-0.0003f * nearWall);
 
-        if (dist < successRadius)
-        {
-            AddReward(+1.0f);
-            EndEpisode();
-            return;
-        }
-        
-
-        // // fora dos limites → termina
-        // if (Mathf.Abs(transform.localPosition.x) > mapLimitX + 0.1f ||
-        //     Mathf.Abs(transform.localPosition.y) > mapLimitY + 0.1f)
+        // if (dist < successRadius)
         // {
-        //     AddReward(-0.2f);
+        //     AddReward(+1.0f);
         //     EndEpisode();
         //     return;
         // }
 
-        // early stop por estagnação
+        // estagnação (como você tinha)
         if (dist + minProgressDelta < bestDistance)
         {
             bestDistance = dist;
@@ -164,61 +198,54 @@ public class NPCReinforcementAgent : Agent
             stepsSinceBest++;
             // if (stepsSinceBest >= noProgressWindow)
             // {
-            //     AddReward(-0.1f); // empacado
+            //     AddReward(-0.1f);
             //     EndEpisode();
             //     return;
             // }
         }
 
         prevDistance = dist;
+        prevSteer = smooth;
     }
 
-        // Punição mais visível em colisão
+    // colisão com obstáculo interno
     void OnCollisionEnter2D(Collision2D col)
     {
         if (((1 << col.gameObject.layer) & obstacleMask) != 0)
         {
             AddReward(-0.01f);
+            if (commitTimer > 0) commitTimer = Mathf.Max(4, commitTimer / 2);
         }
     }
-
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         var ca = actionsOut.ContinuousActions;
         var k = Keyboard.current;
-
         float x = 0f, y = 0f;
         if (k != null)
         {
             x = (k.rightArrowKey.isPressed ? 1f : 0f) + (k.leftArrowKey.isPressed ? -1f : 0f);
             y = (k.upArrowKey.isPressed    ? 1f : 0f) + (k.downArrowKey.isPressed ? -1f : 0f);
         }
-
         ca[0] = Mathf.Clamp(x, -1f, 1f);
         ca[1] = Mathf.Clamp(y, -1f, 1f);
     }
 
     void FixedUpdate()
     {
-        // garante decisão a cada tick de física (não precisa de DecisionRequester)
         RequestDecision();
     }
 
-// >>> NOVO: captura por trigger (no filho "CaptureRange")
+    // captura por trigger (no filho "CaptureRange")
     void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag(runnerTag)) return;
-
-        // Capturou o fugitivo
-        AddReward(+1.0f);  // recompensa por pegar
+        AddReward(+1.0f);
         EndEpisode();
-        // aqui você pode notificar o jogo/placar, tocar som, etc.
     }
 
-// ===== utilidades de desvio =====
-
-    // Amostra 3 raios e retorna direções e pesos por proximidade 0..1
+    // ===== utilidades de desvio (obstáculos internos) =====
     (Vector2 fwd, Vector2 left, Vector2 right, float wf, float wl, float wr) SampleAvoidRays(Vector2? moveDir = null)
     {
         Vector2 baseDir = moveDir.HasValue && moveDir.Value.sqrMagnitude > 0.01f
@@ -239,13 +266,119 @@ public class NPCReinforcementAgent : Agent
         float wl = hl.collider ? 1f - Mathf.Clamp01(hl.distance / rayDist) : 0f;
         float wr = hr.collider ? 1f - Mathf.Clamp01(hr.distance / rayDist) : 0f;
 
-        // Debug opcional
+        // debug opcional
         DebugDrawRay(rb.position, fwd,   hf, Color.white);
         DebugDrawRay(rb.position, left,  hl, Color.white);
         DebugDrawRay(rb.position, right, hr, Color.white);
 
         return (fwd, left, right, wf, wl, wr);
     }
+
+    // ===================== ANTI-PAREDE (somente wallMask) =====================
+
+    // “Empurrar pra dentro” calculado pelas paredes próximas via normals
+    Vector2 PreferenciaInteriorViaWallMask(Vector2 pos)
+    {
+        if (wallMask.value == 0 || probesInterior <= 0) return Vector2.zero;
+
+        float alcance = Mathf.Max(wallProbeLen, margemParede + 0.2f);
+        float raio = Mathf.Max(0.05f, wallProbeRadius);
+
+        Vector2 sum = Vector2.zero;
+
+        float step = 360f / Mathf.Max(1, probesInterior);
+        for (int i = 0; i < probesInterior; i++)
+        {
+            float ang = step * i * Mathf.Deg2Rad;
+            Vector2 dir = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
+
+            RaycastHit2D hit = Physics2D.CircleCast(pos, raio, dir, alcance, wallMask);
+            if (!hit) continue;
+
+            float dist = hit.distance;
+            float w = Mathf.Clamp01(1f - (dist / margemParede)); // >0 se dentro da margem
+            if (w > 0f) sum += hit.normal.normalized * w;        // normal aponta p/ fora da parede
+        }
+
+        if (sum.sqrMagnitude < 1e-6f) return Vector2.zero;
+        return sum.normalized; // longe das paredes detectadas
+    }
+
+    // Escolhe a melhor direção dentro de um leque ao redor de dirBase
+    Vector2 MelhorDirecaoLivre(Vector2 origem, Vector2 dirBase, Vector2 preferAlvo, Vector2 preferDentro)
+    {
+        if (amostras < 5) amostras = 5;
+        if ((amostras % 2) == 0) amostras++;
+
+        float best = float.NegativeInfinity;
+        Vector2 bestDir = dirBase;
+
+        Avaliar(dirBase.normalized, 0f);
+
+        int lados = (amostras - 1) / 2;
+        float passo = lequeGraus / Mathf.Max(1, lados);
+
+        for (int i = 1; i <= lados; i++)
+        {
+            float ang = passo * i;
+            Avaliar(Rotate(dirBase,  ang).normalized,  ang);
+            Avaliar(Rotate(dirBase, -ang).normalized, -ang);
+        }
+
+        return bestDir.normalized;
+
+        void Avaliar(Vector2 d, float ang)
+        {
+            float alcance = Mathf.Max(1f, wallProbeLen);
+            float livre = DistLivreComMargem(origem, d, alcance, wallMask, margemParede);
+            if (livre <= 0.001f) return; // sem margem -> descarta
+
+            float alinhAlvo   = Mathf.Max(0f, Vector2.Dot(d, preferAlvo));   // 0..1
+            float alinhDentro = Mathf.Max(0f, Vector2.Dot(d, preferDentro)); // 0..1
+
+            float score = livre
+                        + pesoAlinhamento * alcance * alinhAlvo
+                        + pesoInterior    * alcance * alinhDentro
+                        - 0.01f * Mathf.Abs(ang);
+
+            if (score > best) { best = score; bestDir = d; }
+        }
+    }
+
+    // cinto de segurança: se ainda aponta pra parede dentro da margem, desliza pela tangente mais livre
+    Vector2 FugaSegura(Vector2 origem, Vector2 dir)
+    {
+        if (wallMask.value == 0) return dir;
+
+        float raio = Mathf.Max(0.05f, margemParede * 0.5f);
+        float alcance = Mathf.Max(wallProbeLen, margemParede + 0.2f);
+
+        RaycastHit2D hit = Physics2D.CircleCast(origem, raio, dir, alcance, wallMask);
+        if (!hit) return dir;
+        if (hit.distance > margemParede) return dir;
+
+        Vector2 n  = hit.normal.normalized;
+        Vector2 t1 = new Vector2(-n.y, n.x).normalized;
+        Vector2 t2 = -t1;
+
+        float d1 = DistLivreComMargem(origem, t1, alcance, wallMask, margemParede);
+        float d2 = DistLivreComMargem(origem, t2, alcance, wallMask, margemParede);
+
+        return (d1 >= d2 ? t1 : t2);
+    }
+
+    // distância “segura” até a parede, descontando a margem (mínimo 0)
+    static float DistLivreComMargem(Vector2 origem, Vector2 dir, float alcance, LayerMask paredes, float margem)
+    {
+        if (paredes.value == 0) return alcance;
+
+        float raio = Mathf.Max(0.05f, margem * 0.5f);
+        RaycastHit2D hit = Physics2D.CircleCast(origem, raio, dir, alcance, paredes);
+        if (!hit) return alcance;
+
+        return Mathf.Max(0f, hit.distance - margem);
+    }
+    // ========================================================================
 
     static Vector2 Rotate(Vector2 v, float degrees)
     {
@@ -261,7 +394,7 @@ public class NPCReinforcementAgent : Agent
         #if UNITY_EDITOR
         float len = hit.collider ? hit.distance : 0f;
         Debug.DrawRay(origin, dir.normalized * (hit.collider ? len : 0f), c, 0f);
-        Debug.DrawRay(origin + dir.normalized * len, dir.normalized * 0.15f, Color.red, 0f);
+        if (hit.collider) Debug.DrawRay(origin + dir.normalized * len, dir.normalized * 0.15f, Color.red, 0f);
         #endif
     }
 }
