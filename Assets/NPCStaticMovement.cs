@@ -5,7 +5,7 @@ using UnityEngine;
 public class NPCPathfinding : MonoBehaviour
 {
     public Transform target;
-    public float speed = 2.2f;                 // velocidade alvo
+    public float speed = 2f;                 // velocidade alvo
     public float nextWaypointDistance = 0.55f; // tolerância base
 
     [Header("Detecção (obstáculos internos)")]
