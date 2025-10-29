@@ -27,17 +27,19 @@ public class RespawnBothOnContact : MonoBehaviour
     static float _nextReset = -999f;
 
     [Header("Round por tempo")]
-    public float roundMaxSeg = 30f;
+    public float roundMaxSeg = 300f;
     float _roundStart;
 
     // ===== métricas =====
     [Header("Métricas por janelas fixas (0-10, 10-20, 20-30)")]
-    public int roundsPorLote = 50;// TAMBÉM será o LIMITE de linhas no CSV de eventos
+    public int roundsPorLote = 10;// TAMBÉM será o LIMITE de linhas no CSV de eventos
 
     // contadores do lote atual
-    int capt0_10 = 0;
-    int capt10_20 = 0;
-    int capt20_30 = 0;
+    int capt0_60 = 0;
+    int capt61_120 = 0;
+    int capt121_180 = 0;
+    int capt181_240 = 0;
+    int capt241_300 = 0;
     int escapes = 0;
     int roundsFeitosNoLote = 0;
 
@@ -69,7 +71,7 @@ public class RespawnBothOnContact : MonoBehaviour
     void Start()
     {
         _roundStart = Time.time;
-        roundMaxSeg = 30f; // round fixo
+        roundMaxSeg = 300f; // round fixo
 
         string dir = Path.Combine(Application.dataPath, "Logs");
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
@@ -81,7 +83,7 @@ public class RespawnBothOnContact : MonoBehaviour
         if (!File.Exists(_csvPathAgregado))
         {
             using (var w = new StreamWriter(_csvPathAgregado, false))
-                w.WriteLine("Lote,Capt_0_10,Capt_10_20,Capt_20_30,Escapes,TotalRounds");
+                w.WriteLine("Lote,Capt_0_60,Capt_61_120,Capt_121_180,Capt_181_240,Capt_241_300,Escapes,TotalRounds");
         }
 
         // cabeçalho eventos por round
@@ -122,9 +124,11 @@ public class RespawnBothOnContact : MonoBehaviour
         string bucket;
         if (foiPego)
         {
-            if (elapsed < 10f)      { capt0_10++; bucket = "0_10"; }
-            else if (elapsed < 20f) { capt10_20++; bucket = "10_20"; }
-            else                    { capt20_30++; bucket = "20_30"; }
+            if (elapsed < 60f)      { capt0_60++; bucket = "0_60"; }
+            else if (elapsed < 120f) { capt61_120++; bucket = "61_120"; }
+            else if (elapsed < 180f) { capt121_180++; bucket = "121_180"; }
+            else if (elapsed < 240f) { capt181_240++; bucket = "181_240"; }
+            else                    { capt241_300++; bucket = "241_300"; }
         }
         else
         {
@@ -158,10 +162,10 @@ public class RespawnBothOnContact : MonoBehaviour
         if (roundsFeitosNoLote >= roundsPorLote)
         {
             int loteIdx = (roundIndexGlobal + roundsPorLote - 1) / roundsPorLote;
-            SalvarLoteNoCsv(loteIdx, capt0_10, capt10_20, capt20_30, escapes, roundsFeitosNoLote);
+            SalvarLoteNoCsv(loteIdx, capt0_60, capt61_120, capt121_180, capt181_240, capt241_300, escapes, roundsFeitosNoLote);
 
             roundsFeitosNoLote = 0;
-            capt0_10 = capt10_20 = capt20_30 = escapes = 0;
+            capt0_60 = capt61_120 = capt121_180 = capt181_240 = capt241_300 = escapes = 0;
         }
 
         // ===== respawn em CANTOS OPOSTOS, alternando a diagonal =====
@@ -216,10 +220,10 @@ public class RespawnBothOnContact : MonoBehaviour
             w.WriteLine($"{roundIndex},{(capturado ? 1 : 0)},{tempo.ToString("0.###", CultureInfo.InvariantCulture)},{bucket}");
     }
 
-    void SalvarLoteNoCsv(int loteIdx, int c0_10, int c10_20, int c20_30, int esc, int totalRounds)
+    void SalvarLoteNoCsv(int loteIdx, int c0_60, int c61_120, int c121_180, int c181_240, int c241_300, int esc, int totalRounds)
     {
         using (var w = new StreamWriter(_csvPathAgregado, true))
-            w.WriteLine($"{loteIdx},{c0_10},{c10_20},{c20_30},{esc},{totalRounds}");
+            w.WriteLine($"{loteIdx},{c0_60},{c61_120},{c121_180}, {c181_240}, {c241_300}, {esc},{totalRounds}");
     }
 
     enum Corner { TL, TR, BL, BR }
