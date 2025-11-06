@@ -3066,7 +3066,7 @@ MonoBehaviour:
   minProgressDelta: 0.01
   obstacleMask:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 0
   rayDist: 2
   avoidAngle: 30
   avoidWeight: 1.2
@@ -3087,6 +3087,11 @@ MonoBehaviour:
   flipThreshold: 4
   commitDuration: 12
   commitStrength: 0.5
+  comparisonMode: 0
+  useSpeedCurriculum: 0
+  speedStart: 1
+  speedEnd: 1
+  stepsAnneal: 200000
   runnerTag: Fugitivo
 --- !u!114 &1595733187
 MonoBehaviour:
@@ -3179,7 +3184,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 1
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 1348197af70c50647826de1d01489f15, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 7f2f6c025b9d8f0499175bd800d67506, type: 3}
   m_InferenceDevice: 3
   m_BehaviorType: 2
   m_BehaviorName: CatchAgent
