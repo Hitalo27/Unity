@@ -4,12 +4,12 @@ using UnityEngine;
 public class NPCFugitive : MonoBehaviour
 {
     public Transform perseguidor;
-    public float moveSpeed = 1f;
+    public float moveSpeed = 2f;
     public float rayDist = 2f;
     public LayerMask obstaculos;
     public float pesoDesvio = 1.2f;
     public float ruído = 0.15f;
-    public float limiteVel = 6f;
+    public float limiteVel = 2f;
 
     // paredes e varredura
     public LayerMask paredes;         // SÓ a layer das bordas

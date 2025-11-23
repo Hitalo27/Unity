@@ -50,7 +50,20 @@ public class NPCReinforcementAgent : Agent
     public int   commitDuration = 12;
     public float commitStrength = 0.5f;
 
+    // ===== Modos de comparação e currículo de velocidade =====
+    [Header("Fair Play / Currículo")]
+    [Tooltip("Comparação justa: sem vantagem oculta e sem assistência interior.")]
+    public bool comparisonMode = true;
+    [Tooltip("Durante o treino, permite pequena vantagem de velocidade e reduz até 1.0.")]
+    public bool useSpeedCurriculum = true;
+    [Range(1.0f, 1.5f)] public float speedStart = 1.00f;
+    [Range(1.0f, 1.5f)] public float speedEnd   = 1.00f;
+    public int stepsAnneal = 200_000;
+
     [SerializeField] string runnerTag = "Fugitivo";
+
+    // DEBUG
+    [SerializeField] float debugSpeed = 0f;
 
     private Vector2 prevSteer = Vector2.zero;
     private int     flipStreak = 0;
@@ -65,6 +78,7 @@ public class NPCReinforcementAgent : Agent
     {
         rb = GetComponent<Rigidbody2D>();
         rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        rb.interpolation = RigidbodyInterpolation2D.Interpolate;
     }
 
     public override void OnEpisodeBegin()
@@ -127,11 +141,15 @@ public class NPCReinforcementAgent : Agent
             ? ((Vector2)(target.position - transform.position)).normalized
             : Vector2.right;
 
+        // Desliga o "empurrão interior" no modo de comparação para não dar assistência
+        float pesoInteriorAtivo = comparisonMode ? 0f : pesoInterior;
+
         Vector2 preferDentro = PreferenciaInteriorViaWallMask(rb.position);
         Vector2 safeDir = MelhorDirecaoLivre(rb.position,
                                              desired.sqrMagnitude > 1e-6f ? desired : toTarget,
                                              toTarget,
-                                             preferDentro);
+                                             preferDentro,
+                                             pesoInteriorAtivo);
         safeDir = FugaSegura(rb.position, safeDir);
         // ==========================================
 
@@ -146,7 +164,7 @@ public class NPCReinforcementAgent : Agent
         else if (dot > 0.4f) flipStreak = Mathf.Max(0, flipStreak - 1);
 
         float turnCost = 1f - Mathf.Clamp01((dot + 1f) * 0.5f); // 0..1
-        AddReward(-0.0003f * turnCost);
+        if (!comparisonMode) AddReward(-0.0003f * turnCost); // desliga custo no fair play
 
         if (commitTimer <= 0 && flipStreak >= flipThreshold)
         {
@@ -161,10 +179,40 @@ public class NPCReinforcementAgent : Agent
         {
             smooth = Vector2.Lerp(smooth, commitBias, commitStrength);
             commitTimer--;
-            AddReward(+0.0002f);
+            if (!comparisonMode) AddReward(+0.0002f);
         }
 
-        rb.linearVelocity = smooth * moveSpeed;
+        // ======== FAIR PLAY: VELOCIDADE JUSTA ========
+        if (smooth.sqrMagnitude > 1e-6f) smooth.Normalize();
+
+        // currículo de velocidade (apenas no treino, e desligado no modo de comparação)
+        float speedMul = 1.0f;
+        if (useSpeedCurriculum && !comparisonMode && Academy.Instance.IsCommunicatorOn)
+        {
+            float t = Mathf.Clamp01((float)Academy.Instance.StepCount / Mathf.Max(1, stepsAnneal));
+            speedMul = Mathf.Lerp(speedStart, speedEnd, t);
+        }
+
+        // usa moveSpeed puro no comparisonMode; no treino, multiplica
+        float v = comparisonMode ? moveSpeed : moveSpeed * speedMul;
+
+        // seta velocidade base
+        rb.linearVelocity = smooth * v;
+
+        // ===== LOCK DURO: nunca passar de moveSpeed quando em comparação =====
+        float s = rb.linearVelocity.magnitude;
+        float cap = comparisonMode ? moveSpeed : v;
+        if (s > cap)
+        {
+            float k = cap / Mathf.Max(s, 1e-6f);
+            rb.linearVelocity *= k;
+
+            // métrica opcional de overshoot (deve ficar ~0)
+            Academy.Instance.StatsRecorder.Add("agent/speed_overshoot", s - cap);
+        }
+
+        // Telemetria (TensorBoard)
+        Academy.Instance.StatsRecorder.Add("agent/speed", rb.linearVelocity.magnitude);
         // ==============================================
 
         // ===== Recompensas =====
@@ -174,20 +222,13 @@ public class NPCReinforcementAgent : Agent
         AddReward(0.6f * Mathf.Clamp(progress, -0.1f, 0.1f));
         AddReward(-0.001f);
 
-        if (progress < 0f) AddReward(-0.01f);
-        if (rb.linearVelocity.magnitude < 0.05f) AddReward(-0.003f);
+        if (!comparisonMode && progress < 0f) AddReward(-0.01f);
+        if (!comparisonMode && rb.linearVelocity.magnitude < 0.05f) AddReward(-0.003f);
 
         float nearWall = rays.wf + rays.wl + rays.wr; // (internos) penaliza “apertado”
-        AddReward(-0.0003f * nearWall);
+        if (!comparisonMode) AddReward(-0.0003f * nearWall);
 
-        // if (dist < successRadius)
-        // {
-        //     AddReward(+1.0f);
-        //     EndEpisode();
-        //     return;
-        // }
-
-        // estagnação (como você tinha)
+        // estagnação
         if (dist + minProgressDelta < bestDistance)
         {
             bestDistance = dist;
@@ -196,12 +237,6 @@ public class NPCReinforcementAgent : Agent
         else
         {
             stepsSinceBest++;
-            // if (stepsSinceBest >= noProgressWindow)
-            // {
-            //     AddReward(-0.1f);
-            //     EndEpisode();
-            //     return;
-            // }
         }
 
         prevDistance = dist;
@@ -213,7 +248,7 @@ public class NPCReinforcementAgent : Agent
     {
         if (((1 << col.gameObject.layer) & obstacleMask) != 0)
         {
-            AddReward(-0.01f);
+            if (!comparisonMode) AddReward(-0.01f);
             if (commitTimer > 0) commitTimer = Mathf.Max(4, commitTimer / 2);
         }
     }
@@ -235,6 +270,12 @@ public class NPCReinforcementAgent : Agent
     void FixedUpdate()
     {
         RequestDecision();
+    }
+
+    // DEBUG: ver velocidade real no Inspector
+    void LateUpdate()
+    {
+        if (rb != null) debugSpeed = rb.linearVelocity.magnitude;
     }
 
     // captura por trigger (no filho "CaptureRange")
@@ -305,7 +346,7 @@ public class NPCReinforcementAgent : Agent
     }
 
     // Escolhe a melhor direção dentro de um leque ao redor de dirBase
-    Vector2 MelhorDirecaoLivre(Vector2 origem, Vector2 dirBase, Vector2 preferAlvo, Vector2 preferDentro)
+    Vector2 MelhorDirecaoLivre(Vector2 origem, Vector2 dirBase, Vector2 preferAlvo, Vector2 preferDentro, float pesoInteriorParam)
     {
         if (amostras < 5) amostras = 5;
         if ((amostras % 2) == 0) amostras++;
@@ -333,12 +374,12 @@ public class NPCReinforcementAgent : Agent
             float livre = DistLivreComMargem(origem, d, alcance, wallMask, margemParede);
             if (livre <= 0.001f) return; // sem margem -> descarta
 
-            float alinhAlvo   = Mathf.Max(0f, Vector2.Dot(d, preferAlvo));   // 0..1
-            float alinhDentro = Mathf.Max(0f, Vector2.Dot(d, preferDentro)); // 0..1
+            float alinhAlvo   = Mathf.Max(0f, Vector2.Dot(d, preferAlvo));      // 0..1
+            float alinhDentro = Mathf.Max(0f, Vector2.Dot(d, preferDentro));    // 0..1
 
             float score = livre
                         + pesoAlinhamento * alcance * alinhAlvo
-                        + pesoInterior    * alcance * alinhDentro
+                        + pesoInteriorParam * alcance * alinhDentro // usa peso ativo (0 no fair play)
                         - 0.01f * Mathf.Abs(ang);
 
             if (score > best) { best = score; bestDir = d; }
