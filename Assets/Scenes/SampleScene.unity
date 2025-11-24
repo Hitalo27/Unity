@@ -2915,7 +2915,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595733178}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 363a114d1ccdf094e9f3c690df1a832c, type: 3}
   m_Name: 
@@ -2968,30 +2968,32 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595733178}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19c14e7830061594897198850672ba13, type: 3}
+  m_Script: {fileID: 11500000, guid: 350b745b599bf1d4b9d4b1b6b1534ef7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 1500616240}
   speed: 2
-  nextWaypointDistance: 0.5
+  nextWaypointDistance: 0.55
   obstacleMask:
+    serializedVersion: 2
     m_Bits: 8
   runnerTag: Fugitivo
   wallMask:
+    serializedVersion: 2
     m_Bits: 64
-  wallProbeLen: 1.2
-  wallProbeRadius: 0.32
-  margemParede: 0.6
+  wallProbeLen: 1.6
+  wallProbeRadius: 0.38
+  margemParede: 0.8
   pesoAlinhamento: 0.25
   pesoInterior: 0.6
-  probesInterior: 12
+  probesInterior: 16
   amostras: 13
   lequeGraus: 90
   acceleration: 18
   turnBlend: 0.35
-  maxSpeedCap: 2
+  maxSpeedCap: 6
   stuckSpeed: 0.07
   stuckTime: 0.6
   kickSpeed: 2.2
@@ -3000,14 +3002,6 @@ MonoBehaviour:
   unstuckCone: 120
   unstuckProbeLen: 1.8
   unstuckProbeRadius: 0.28
-  agentRadius: 0.35
-  clearanceExtra: 0.1
-  currentWaypoint: 0
-  seeker: {fileID: 0}
-  rb: {fileID: 0}
-  _lowSpeedTimer: 0
-  _kickUntil: -999
-  _kickDir: {x: 0, y: 0}
 --- !u!114 &1595733188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3015,7 +3009,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595733178}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 373b52eb9bf8c40f785bb6947a1aee66, type: 3}
   m_Name: 
@@ -3043,7 +3037,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1595733178}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5d1c4e0b1822b495aa52bc52839ecb30, type: 3}
   m_Name: 

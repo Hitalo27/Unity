@@ -5,8 +5,8 @@ using UnityEngine;
 public class NPCPathfinding : MonoBehaviour
 {
     public Transform target;
-    public float speed = 2f;                 // velocidade alvo
-    public float nextWaypointDistance = 0.55f; // tolerância base
+    public float speed = 2f;
+    public float nextWaypointDistance = 0.55f;
 
     [Header("Detecção (obstáculos internos)")]
     [SerializeField] LayerMask obstacleMask;   // mesas/caixas/etc.
@@ -14,40 +14,43 @@ public class NPCPathfinding : MonoBehaviour
 
     [Header("Parede/Desvio (bordas externas)")]
     public LayerMask wallMask;                 // SOMENTE as bordas/parede da arena
-    [Range(0.2f, 2.5f)] public float wallProbeLen = 1.6f;     // alcance base sondas (↑)
-    [Range(0.1f, 0.8f)] public float wallProbeRadius = 0.38f; // raio das sondas (↑)
+    [Range(0.2f, 2.5f)] public float wallProbeLen = 1.6f;
+    [Range(0.1f, 0.8f)] public float wallProbeRadius = 0.38f;
 
     [Header("Anti-colar na parede (sem BoxCollider de limites)")]
-    [Range(0.2f, 1.2f)] public float margemParede = 0.8f;     // distância mínima aceitável às bordas (↑)
-    [Range(0f, 1f)]     public float pesoAlinhamento = 0.25f; // alinhamento com alvo
-    [Range(0f, 1.5f)]   public float pesoInterior = 0.6f;     // empurrar p/ dentro se perto da parede
-    [Range(6, 40)]      public int probesInterior = 16;       // amostras para interior (↑)
+    [Range(0.2f, 1.2f)] public float margemParede = 0.8f;
+    [Range(0f, 1f)]     public float pesoAlinhamento = 0.25f;
+    [Range(0f, 1.5f)]   public float pesoInterior = 0.6f;
+    [Range(6, 40)]      public int probesInterior = 16;
 
     [Header("Amostragem de direção segura")]
-    [Range(5, 41)] public int amostras = 13;                  // ímpar (ex.: 13)
-    [Range(30f, 150f)] public float lequeGraus = 90f;         // abertura total do leque
+    [Range(5, 41)] public int amostras = 13;
+    [Range(30f, 150f)] public float lequeGraus = 90f;
 
     [Header("Steering/Suavização")]
     public float acceleration = 18f;
-    public float turnBlend = 0.35f;           // reservado se quiser misturar rotações
+    public float turnBlend = 0.35f;
     public float maxSpeedCap = 6f;
 
-    [Header("Anti-travamento (mínimo, sem mexer na perseguição)")]
-    public float stuckSpeed = 0.07f;          // velocidade considerada "parado"
-    public float stuckTime = 0.6f;            // tempo parado para acionar
-    public float kickSpeed = 2.2f;            // velocidade do empurrão
-    public float kickDuration = 0.25f;        // duração do empurrão
-    public int   unstuckSamples = 13;         // ímpar (ex.: 13)
-    public float unstuckCone = 120f;          // abertura do leque
-    public float unstuckProbeLen = 1.8f;      // alcance do teste
-    public float unstuckProbeRadius = 0.28f;  // raio do CircleCast
+    [Header("Anti-travamento")]
+    public float stuckSpeed = 0.30f;
+    public float stuckTime = 0.35f;
+    public float kickSpeed = 3.0f;
+    public float kickDuration = 0.25f;
+    public int   unstuckSamples = 13;
+    public float unstuckCone = 120f;
+    public float unstuckProbeLen = 1.8f;
+    public float unstuckProbeRadius = 0.28f;
+
+    [Header("Tamanho aproximado do NPC")]
+    public float agentRadius = 0.35f;      // usado para "não encostar" nos obstáculos
+    public float clearanceExtra = 0.10f;   // folga além do raio
 
     private Path path;
     private int currentWaypoint = 0;
     private Seeker seeker;
     private Rigidbody2D rb;
 
-    // estado interno do destravamento
     private float _lowSpeedTimer = 0f;
     private float _kickUntil = -999f;
     private Vector2 _kickDir = Vector2.zero;
@@ -86,34 +89,23 @@ public class NPCPathfinding : MonoBehaviour
     {
         if (target == null) { rb.linearVelocity = Vector2.zero; return; }
 
-        // ===== destravamento mínimo, sem alterar a perseguição =====
+        // chute (anti-travamento em andamento)
         if (Time.time < _kickUntil)
         {
             rb.linearVelocity = _kickDir * Mathf.Max(kickSpeed, speed);
             return;
         }
 
-        // medir velocidade atual
         float _spd = rb.linearVelocity.magnitude;
-
-        // tolerância maior se muito perto da parede
-        Vector2 dirAteAlvo = ((Vector2)target.position - rb.position).sqrMagnitude > 1e-6f
-            ? ((Vector2)target.position - rb.position).normalized
-            : Vector2.right;
-
-        bool pertoParede = DistLivreComMargem(rb.position, dirAteAlvo,
-                                              Mathf.Max(wallProbeLen, 1f), wallMask, margemParede) < 0.15f;
-
-        float limiar = pertoParede ? stuckSpeed * 0.5f : stuckSpeed;
+        float limiar = stuckSpeed;
 
         if (_spd < limiar) _lowSpeedTimer += Time.fixedDeltaTime;
         else _lowSpeedTimer = 0f;
 
-        // se ficou parado por tempo suficiente: escolher um lado livre e chutar
         if (_lowSpeedTimer >= stuckTime)
         {
-            Vector2 prefer = ComputeDesiredDirection();                 // lógica atual
-            Vector2 dir    = FindUnstuckDirection(rb.position, prefer); // varre o leque e pega espaço livre
+            Vector2 prefer = ComputeDesiredDirection();
+            Vector2 dir    = FindUnstuckDirection(rb.position, prefer);
 
             _kickDir = (dir.sqrMagnitude > 1e-6f ? dir.normalized : Random.insideUnitCircle.normalized);
             _kickUntil = Time.time + kickDuration;
@@ -122,27 +114,26 @@ public class NPCPathfinding : MonoBehaviour
             _lowSpeedTimer = 0f;
             return;
         }
-        // ===== fim do bloco de destravamento =====
 
-        // direção desejada (path -> alvo -> tangente)
+        // direção base (sem considerar obstáculos ainda)
         Vector2 desiredDir = ComputeDesiredDirection();
 
-        // escolhe direção segura (leque + margem + interior via wallMask)
+        // prefere interior com base nas paredes
         Vector2 preferInt  = PreferenciaInteriorViaWallMask(rb.position);
-        Vector2 dirEscolhida = MelhorDirecaoLivre(rb.position,
-                                                  desiredDir,     // base
-                                                  desiredDir,     // preferir apontar pro alvo
-                                                  preferInt);     // e fugir da borda se perto
 
-        // cinto de segurança: se ainda aponta pra borda próxima, desliza tangente
+        // aqui entra a lógica de "não encostar": amostragem por parede + obstáculos
+        Vector2 dirEscolhida = MelhorDirecaoLivre(rb.position,
+                                                  desiredDir,
+                                                  desiredDir,
+                                                  preferInt);
+
         dirEscolhida = FugaSegura(rb.position, dirEscolhida);
 
-        // steering suave
         Vector2 desiredVel = dirEscolhida * speed;
         SteerTowards(desiredVel, speed);
     }
 
-    // Decide a direção “bruta” usando path/waypoints e fallback
+    // path + fallback simples (sem desvio aqui, só direção "bruta")
     private Vector2 ComputeDesiredDirection()
     {
         if (path != null && currentWaypoint < path.vectorPath.Count)
@@ -153,36 +144,16 @@ public class NPCPathfinding : MonoBehaviour
             if (dist > 1e-4f)
             {
                 Vector2 dir = toWp / dist;
-
-                // se tiver algo entre você e o waypoint, tenta recalcular p/ alvo
-                RaycastHit2D hit = Physics2D.CircleCast(rb.position, 0.35f, dir, dist, obstacleMask);
-                if (hit.collider != null && seeker.IsDone())
-                    seeker.StartPath(rb.position, target.position, OnPathComplete);
-
-                // tolerância dinâmica
                 if (dist < AdjustedWaypointTolerance(dir)) currentWaypoint++;
                 return dir;
             }
         }
 
-        // fallback: linha de visão pro alvo
         Vector2 toTarget = (Vector2)target.position - rb.position;
         float dAlvo = toTarget.magnitude;
         if (dAlvo <= 0.01f) return Vector2.zero;
 
-        Vector2 dirAlvo = toTarget / dAlvo;
-        RaycastHit2D vis = Physics2D.CircleCast(rb.position, 0.35f, dirAlvo, dAlvo, obstacleMask);
-
-        if (vis.collider == null) return dirAlvo;
-
-        // sem visão: desliza pela tangente
-        Vector2 tang = Vector2.Perpendicular(vis.normal).normalized;
-        Vector2 candA = tang;
-        Vector2 candB = -tang;
-        Vector2 melhor = (Vector2.Dot(candA, dirAlvo) > Vector2.Dot(candB, dirAlvo)) ? candA : candB;
-
-        if (seeker.IsDone()) seeker.StartPath(rb.position, target.position, OnPathComplete);
-        return melhor;
+        return toTarget / dAlvo;
     }
 
     private float AdjustedWaypointTolerance(Vector2 dirToWp)
@@ -190,14 +161,13 @@ public class NPCPathfinding : MonoBehaviour
         if (path == null || currentWaypoint + 1 >= path.vectorPath.Count) return nextWaypointDistance;
         Vector2 cur = dirToWp;
         Vector2 next = ((Vector2)path.vectorPath[currentWaypoint + 1] - (Vector2)path.vectorPath[currentWaypoint]).normalized;
-        float alinh = Mathf.Clamp01(Vector2.Dot(cur, next)); // 1 bom, 0 ruim
-        float extra = Mathf.Lerp(0.35f, 0f, alinh);           // +35cm quando ângulo é ruim
+        float alinh = Mathf.Clamp01(Vector2.Dot(cur, next));
+        float extra = Mathf.Lerp(0.35f, 0f, alinh);
         return nextWaypointDistance + extra;
     }
 
-    // ===================== anti-parede (sem Box de limites) =====================
+    // ===================== paredes (empurrar para dentro) =====================
 
-    // “Empurrar pra dentro” calculado pelas paredes mais próximas via normals
     Vector2 PreferenciaInteriorViaWallMask(Vector2 pos)
     {
         if (wallMask.value == 0 || probesInterior <= 0) return Vector2.zero;
@@ -206,9 +176,8 @@ public class NPCPathfinding : MonoBehaviour
         float raio = Mathf.Max(0.05f, wallProbeRadius);
 
         Vector2 sum = Vector2.zero;
-
-        // amostra em círculo
         float step = 360f / probesInterior;
+
         for (int i = 0; i < probesInterior; i++)
         {
             float ang = step * i * Mathf.Deg2Rad;
@@ -218,11 +187,11 @@ public class NPCPathfinding : MonoBehaviour
             if (!hit) continue;
 
             float dist = hit.distance;
-            float w = Mathf.Clamp01(1f - (dist / margemParede)); // >0 se estiver dentro da margem
+            float w = Mathf.Clamp01(1f - (dist / margemParede));
             if (w > 0f)
             {
-                Vector2 n = hit.normal.normalized; // normal aponta PARA fora
-                sum += n * w;                      // soma vetores “para dentro”
+                Vector2 n = hit.normal.normalized;
+                sum += n * w;
             }
         }
 
@@ -230,7 +199,7 @@ public class NPCPathfinding : MonoBehaviour
         return sum.normalized;
     }
 
-    // Escolhe a melhor direção dentro de um leque ao redor de dirBase
+    // DIREÇÃO SEGURA: leva em conta paredes E obstáculos para não encostar
     Vector2 MelhorDirecaoLivre(Vector2 origem, Vector2 dirBase, Vector2 preferAlvo, Vector2 preferDentro)
     {
         if (amostras < 5) amostras = 5;
@@ -251,7 +220,6 @@ public class NPCPathfinding : MonoBehaviour
             Avaliar(Rotate(dirBase, -ang).normalized, -ang);
         }
 
-        // fallback se nenhuma direção prestou
         if (best <= float.NegativeInfinity + 1f)
         {
             if (preferDentro.sqrMagnitude > 1e-6f) return preferDentro.normalized;
@@ -263,11 +231,26 @@ public class NPCPathfinding : MonoBehaviour
         void Avaliar(Vector2 d, float ang)
         {
             float alcance = Mathf.Max(1f, wallProbeLen);
-            float livre = DistLivreComMargem(origem, d, alcance, wallMask, margemParede);
+
+            // distância até parede (com margem)
+            float livreParede = DistLivreComMargem(origem, d, alcance, wallMask, margemParede);
+
+            // distância até obstáculo interno
+            float distObs = DistLivreEnv(origem, d, alcance,
+                                         agentRadius + clearanceExtra,
+                                         obstacleMask);
+
+            // se obstáculo estiver muito perto nessa direção, descarta
+            if (distObs < agentRadius + clearanceExtra * 0.5f)
+                return;
+
+            // espaço efetivo: o menor entre parede e obstáculo
+            float livre = Mathf.Min(livreParede, distObs);
+
             if (livre <= 0.001f) return;
 
-            float alinhAlvo   = Mathf.Max(0f, Vector2.Dot(d, preferAlvo));   // 0..1
-            float alinhDentro = Mathf.Max(0f, Vector2.Dot(d, preferDentro)); // 0..1
+            float alinhAlvo   = Mathf.Max(0f, Vector2.Dot(d, preferAlvo));
+            float alinhDentro = Mathf.Max(0f, Vector2.Dot(d, preferDentro));
 
             float score = livre
                         + pesoAlinhamento * alcance * alinhAlvo
@@ -278,7 +261,6 @@ public class NPCPathfinding : MonoBehaviour
         }
     }
 
-    // cinto de segurança: se ainda aponta pra parede dentro da margem, desliza pela tangente mais livre
     Vector2 FugaSegura(Vector2 origem, Vector2 dir)
     {
         if (wallMask.value == 0) return dir;
@@ -301,12 +283,11 @@ public class NPCPathfinding : MonoBehaviour
         {
             Vector2 interior = PreferenciaInteriorViaWallMask(origem);
             if (interior.sqrMagnitude > 1e-6f) return interior;
-            return t1; // último recurso
+            return t1;
         }
         return (d1 >= d2 ? t1 : t2);
     }
 
-    // distância “segura” até a parede, descontando a margem (mínimo 0)
     static float DistLivreComMargem(Vector2 origem, Vector2 dir, float alcance, LayerMask paredes, float margem)
     {
         if (paredes.value == 0) return alcance;
@@ -318,7 +299,6 @@ public class NPCPathfinding : MonoBehaviour
         return Mathf.Max(0f, hit.distance - margem);
     }
 
-    // util: girar vetor (graus)
     static Vector2 Rotate(Vector2 v, float graus)
     {
         float r = graus * Mathf.Deg2Rad; float c = Mathf.Cos(r), s = Mathf.Sin(r);
@@ -341,19 +321,18 @@ public class NPCPathfinding : MonoBehaviour
         if (agent != null) agent.EndEpisode();
     }
 
-    // ===== utilitários do destravamento =====
+    // ===== utilitários =====
 
-    // distância livre até bater em obstáculo/parede (ou "alcance" se não bater)
     float DistLivreEnv(Vector2 origem, Vector2 dir, float alcance, float raio, LayerMask mask)
     {
+        if (mask.value == 0) return alcance;
         RaycastHit2D hit = Physics2D.CircleCast(origem, raio, dir.normalized, alcance, mask);
         return hit ? hit.distance : alcance;
     }
 
-    // escolhe a melhor direção livre em um leque ao redor de uma direção preferida
     Vector2 FindUnstuckDirection(Vector2 pos, Vector2 dirPreferida)
     {
-        LayerMask combined = obstacleMask | wallMask;
+        LayerMask combined = wallMask | obstacleMask;
 
         Vector2 baseDir = (dirPreferida.sqrMagnitude > 1e-6f ? dirPreferida.normalized
                                                              : Random.insideUnitCircle.normalized);
@@ -361,7 +340,7 @@ public class NPCPathfinding : MonoBehaviour
         Vector2 best = baseDir;
         float bestScore = -1f;
 
-        int n = Mathf.Max(5, unstuckSamples | 1);   // garante ímpar
+        int n = Mathf.Max(5, unstuckSamples | 1);
         int lados = (n - 1) / 2;
         float passo = unstuckCone / Mathf.Max(1, lados);
 
@@ -370,18 +349,18 @@ public class NPCPathfinding : MonoBehaviour
 
         void Avaliar(Vector2 d, float ang)
         {
-            float livre = DistLivreEnv(pos, d, unstuckProbeLen, unstuckProbeRadius, combined);
+            float livre = DistLivreEnv(pos, d, unstuckProbeLen,
+                                       agentRadius + clearanceExtra,
+                                       combined);
             if (livre <= 0.05f) return;
 
-            float alinh = Mathf.Max(0f, Vector2.Dot(d, dirAlvo)); // 0..1 (peso leve)
+            float alinh = Mathf.Max(0f, Vector2.Dot(d, dirAlvo));
             float score = livre + 0.30f * unstuckProbeLen * alinh - 0.005f * Mathf.Abs(ang);
 
             if (score > bestScore) { bestScore = score; best = d.normalized; }
         }
 
-        // centro
         Avaliar(baseDir, 0f);
-        // lados simétricos
         for (int i = 1; i <= lados; i++)
         {
             float ang = passo * i;
@@ -391,5 +370,21 @@ public class NPCPathfinding : MonoBehaviour
 
         if (bestScore < 0f) best = Random.insideUnitCircle.normalized;
         return best;
+    }
+
+    // empurrão extra em contato (seguro se algo escapar da lógica principal)
+    void OnCollisionStay2D(Collision2D col)
+    {
+        if (rb.linearVelocity.magnitude > 0.2f) return;
+
+        Vector2 normal = Vector2.zero;
+        foreach (var c in col.contacts)
+            normal += c.normal;
+
+        if (normal.sqrMagnitude < 1e-6f) return;
+        normal.Normalize();
+
+        Vector2 tangente = new Vector2(-normal.y, normal.x);
+        rb.AddForce(tangente * 2.5f, ForceMode2D.Impulse);
     }
 }
